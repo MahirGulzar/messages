@@ -39,6 +39,7 @@ add_message_files(
     LampCmd.msg
     Lane.msg
     LaneArray.msg
+    LaneArrayStamped.msg
     NDTStat.msg
     ObjLabel.msg
     ObjPose.msg
