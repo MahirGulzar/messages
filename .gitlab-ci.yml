@@ -1,26 +1,22 @@
-.build: &build_common
-  before_script:
-    - mkdir -p src_tmp/${CI_PROJECT_NAME} && mv `find -maxdepth 1 -not -name . -not -name src_tmp` src_tmp/${CI_PROJECT_NAME} && mv src_tmp/ src/
-    - sudo apt-get update
-    - sudo apt-get install -y wget python3-pip python3-setuptools python3-colcon-common-extensions
-    # Update setuptools from PyPI because the version Ubuntu ships with is too old
-    - pip3 install -U setuptools
-    - rosdep update
-  script:
-    - source /opt/ros/${ROS_DISTRO}/setup.bash
-    - rosdep install -y --from-paths src --ignore-src --rosdistro ${ROS_DISTRO}
-    # We first build the entire workspace normally
-    - colcon build --cmake-args -DCMAKE_CXX_FLAGS="${CMAKE_CXX_FLAGS} -fprofile-arcs -ftest-coverage" -DCMAKE_C_FLAGS="${CMAKE_C_FLAGS} -fprofile-arcs -ftest-coverage" -DCMAKE_BUILD_TYPE=Debug
-    # And then build the tests target. catkin (ROS1) packages add their tests to the tests target
-    # which is not the standard target for CMake projects. We need to trigger the tests target so that
-    # tests are built and any fixtures are set up.
-    - colcon build --cmake-target tests --cmake-args -DCMAKE_CXX_FLAGS="${CMAKE_CXX_FLAGS} -fprofile-arcs -ftest-coverage" -DCMAKE_C_FLAGS="${CMAKE_C_FLAGS} -fprofile-arcs -ftest-coverage" -DCMAKE_BUILD_TYPE=Debug
-    - colcon test
-    - colcon test-result --verbose
+stages:
+  - autoware_messages_build
 
-build_melodic:
-  image: autonomoustuff/autoware:bleedingedge-melodic-base
-  <<: *build_common
-  only:
-    - merge_requests
-    - as/master
+image: registry.hpc.ut.ee/mirror/library/docker:18.09.7-dind
+
+# WORKAROUND TO: https://forum.gitlab.com/t/docker-dind-stops-working-after-12-1-0-update/28664/4
+variables:
+  DOCKER_HOST: tcp://docker:2375/
+  DOCKER_DRIVER: overlay2
+  # See https://github.com/docker-library/docker/pull/166
+  DOCKER_TLS_CERTDIR: ""
+
+# Stages
+
+autoware_messages_build:
+  stage: autoware_messages_build
+  services:
+    - name: docker:dind
+      entrypoint: [ "env", "-u", "DOCKER_HOST" ]
+      command: [ "dockerd-entrypoint.sh" ]
+  script:
+    - cd .ci && ls -la && ./build.bash
