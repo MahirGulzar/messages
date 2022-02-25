@@ -8,3 +8,4 @@ float32 cost
 float32 closest_object_distance
 float32 closest_object_velocity
 bool is_blocked
+bool is_predictive_blocked
